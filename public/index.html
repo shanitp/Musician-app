@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Musicians</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <main>
+    <h1>Musicians</h1>
+
+    <section id="add">
+      <h2>Add Musician</h2>
+      <form id="addForm">
+        <label>
+          Name
+          <input name="name" required />
+        </label>
+        <label>
+          Instrument
+          <input name="instrument" required />
+        </label>
+        <button type="submit">Add</button>
+      </form>
+      <div id="message" role="status" aria-live="polite"></div>
+    </section>
+
+    <section id="list">
+      <h2>List</h2>
+      <ul id="musicians"></ul>
+    </section>
+  </main>
+
+  <script src="/app.js"></script>
+</body>
+</html>
