@@ -7,28 +7,56 @@ const dataDir = path.join(__dirname, '..', 'data');
 const dataFile = path.join(dataDir, 'musicians.json');
 
 function ensureDataFile() {
-  if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
-  if (!fs.existsSync(dataFile)) fs.writeFileSync(dataFile, '[]', 'utf8');
+  try {
+    if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
+    if (!fs.existsSync(dataFile)) fs.writeFileSync(dataFile, '[]', 'utf8');
+  } catch (err) {
+    // If we can't create the file (permissions, locked file, etc.), don't throw —
+    // higher-level code will fall back to in-memory store.
+    fileAvailable = false;
+    console.warn('Warning: could not ensure data file exists:', err && err.message);
+  }
 }
 
 function load() {
   ensureDataFile();
+  if (!fileAvailable) return musicians;
   try {
     const raw = fs.readFileSync(dataFile, 'utf8');
     return JSON.parse(raw || '[]');
   } catch (e) {
-    return [];
+    fileAvailable = false;
+    console.warn('Warning: failed to read data file, using memory store:', e && e.message);
+    return musicians;
   }
 }
 
 function save(arr) {
-  ensureDataFile();
-  fs.writeFileSync(dataFile, JSON.stringify(arr, null, 2), 'utf8');
+  try {
+    ensureDataFile();
+    fs.writeFileSync(dataFile, JSON.stringify(arr, null, 2), 'utf8');
+    fileAvailable = true;
+    return true;
+  } catch (err) {
+    fileAvailable = false;
+    console.warn('Warning: failed to save data to file, falling back to memory. Error:', err && err.message);
+    return false;
+  }
 }
 
+// file availability flag — if false we operate purely in-memory
+let fileAvailable = true;
+
 // in-memory cache that's kept in sync with file for small app convenience
-let musicians = load();
-let nextId = musicians.reduce((m, x) => Math.max(m, x.id || 0), 0) + 1;
+let musicians = [];
+let nextId = 1;
+
+// try to initialize from file; if file not available we'll keep memory-only
+const _initial = load();
+if (Array.isArray(_initial) && _initial.length > 0) {
+  musicians = _initial;
+  nextId = musicians.reduce((m, x) => Math.max(m, x.id || 0), 0) + 1;
+}
 
 // GET /musicians - list all musicians
 router.get('/', (req, res) => {
@@ -99,10 +127,17 @@ router.delete('/:id', (req, res) => {
 
 // For tests: helper to reset datastore
 router._reset = () => {
-  ensureDataFile();
-  musicians = [];
-  nextId = 1;
-  save(musicians);
+  try {
+    ensureDataFile();
+    musicians = [];
+    nextId = 1;
+    save(musicians);
+  } catch (err) {
+    // If we can't write to disk, still reset in-memory state so tests can proceed.
+    console.warn('Warning: could not reset data file, resetting in-memory only:', err && err.message);
+    musicians = [];
+    nextId = 1;
+  }
 };
 
 module.exports = router;

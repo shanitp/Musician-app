@@ -10,7 +10,15 @@ app.use(express.static('public'));
 app.use('/musicians', musiciansRouter);
 
 // health (keeps JSON health available at /health)
-app.get('/health', (req, res) => res.json({ ok: true }));
+const pkg = require('./package.json');
+app.get('/health', (req, res) => {
+  res.json({
+    status: 'ok',
+    uptime: process.uptime(),
+    timestamp: new Date().toISOString(),
+    version: pkg.version,
+  });
+});
 
 if (require.main === module) {
   const port = process.env.PORT || 3000;
