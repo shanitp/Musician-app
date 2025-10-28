@@ -18,9 +18,9 @@ async function fetchList() {
     edit.textContent = 'Edit';
     edit.addEventListener('click', () => startEdit(li, m));
 
-    const del = document.createElement('button');
-    del.textContent = 'Delete';
-    del.addEventListener('click', () => deleteMusician(m.id));
+  const del = document.createElement('button');
+  del.textContent = 'Delete';
+  del.addEventListener('click', () => deleteMusician(m.id, li));
 
     actions.appendChild(edit);
     actions.appendChild(del);
@@ -51,15 +51,23 @@ async function addMusician(ev){
   }
 }
 
-async function deleteMusician(id){
+async function deleteMusician(id, listItem){
   const message = document.getElementById('message');
+  // Optimistically remove from UI
+  const ul = listItem && listItem.parentNode;
+  if (listItem && ul) {
+    // Remove immediately
+    listItem.remove();
+  }
+
   try{
     const res = await fetch(`${base}/musicians/${id}`, { method: 'DELETE' });
     if (!res.ok) throw new Error((await res.json()).error || 'Failed');
     message.textContent = 'Deleted';
-    await fetchList();
   }catch(err){
+    // On failure, refresh list to restore UI state and show error
     message.textContent = err.message || 'Error';
+    await fetchList();
   }
 }
 
